@@ -19,10 +19,20 @@ load_dotenv()
 app = Flask(__name__)
 
 # --- Firebase Admin SDK Initialization ---
-cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if not cred_path:
+cred_data = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if not cred_data:
     raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS not set")
-cred = credentials.Certificate(cred_path)
+
+# Try to parse as JSON first (if it's inline), otherwise treat as file path
+try:
+    cred_dict = json.loads(cred_data)
+    cred = credentials.Certificate(cred_dict)
+except (json.JSONDecodeError, ValueError):
+    # If not JSON, treat as file path
+    if not os.path.exists(cred_data):
+        raise RuntimeError(f"GOOGLE_APPLICATION_CREDENTIALS file not found: {cred_data}")
+    cred = credentials.Certificate(cred_data)
+
 firebase_admin.initialize_app(cred)
 
 # --- Firebase Client Libraries Initialization ---
