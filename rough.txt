@@ -1,0 +1,61 @@
+        ai_analysis = {
+            "classification": "unclassified",
+            "severity": 1,
+            "priority": "Low",
+            "suggestedAction": "Manual review"
+        }
+
+        try:
+            model_name = os.getenv("GENAI_MODEL", "models/gemini-2.5-flash")
+
+            response = genai_client.models.generate_content(
+                model=model_name,
+                contents=[
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "text": (
+                                    f'Analyze this urban issue image. '
+                                    f'Description: "{description}". '
+                                    'Return a JSON object with: '
+                                    '"classification", "severity", "priority", "suggestedAction".'
+                                )
+                            },
+                            {
+                                "inline_data": {
+                                    "mime_type": image_file.content_type,
+                                    "data": image_bytes
+                                }
+                            }
+                        ]
+                    }
+                ]
+            )
+
+            # Extract model text
+            raw = ""
+            try:
+                raw = response.text.strip()
+            except:
+                try:
+                    raw = response.output_text.strip()
+                except:
+                    raw = str(response)
+
+            raw = raw.replace("```json", "").replace("```", "").strip()
+
+            # Parse JSON safely
+            try:
+                ai_analysis = json.loads(raw)
+            except:
+                start = raw.find('{')
+                end = raw.rfind('}')
+                if start != -1 and end != -1:
+                    try:
+                        ai_analysis = json.loads(raw[start:end+1])
+                    except:
+                        pass
+
+        except Exception as e:
+            print("AI model failed:", e)

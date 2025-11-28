@@ -1,0 +1,113 @@
+# Flask
+# google-cloud-firestore
+# google-cloud-storage
+# google-generativeai
+# python-dotenv
+
+#      how to set up the api
+
+2. The Backend Server
+The Python script app.py acts as the server. When you run it, it will:
+
+Read your Google Maps API key from the .env file.
+
+Find the index.html file in the templates folder.
+
+Replace the {{ maps_api_key }} placeholder in the HTML with your actual key.
+
+Serve the final, complete HTML file to your browser.
+
+Handle the API requests for fetching and submitting issues (like /api/issues).
+
+3. How to Run It
+Make sure your app.py and .env files are set up correctly.
+
+Open your terminal in the main project folder (/your-project-folder/).
+
+Run the Python server using the command: python app.py
+
+Open your web browser and go to the address shown in the terminal, which is usually http://127.0.0.1:5000.
+
+When you visit that URL, the Python server will render and display the index.html file, and the application will be fully functional.
+
+
+
+
+
+
+
+#.          How to set up firebase
+
+
+
+Of course. Here are the detailed steps to set up your project on the Firebase website.
+
+1. Create a New Firebase Project
+Go to the Firebase Console.
+
+Click on "Add project".
+
+Enter a name for your project (e.g., "CiviLens-Project") and click Continue.
+
+You can choose to enable or disable Google Analytics. For this project, you don't need it, so you can disable it and click "Create project".
+
+Wait for Firebase to finish creating your project.
+
+2. Set Up Firestore Database
+Once your project is ready, you'll be on the project dashboard. In the left-hand menu, under "Build", click on Firestore Database.
+
+Click the "Create database" button.
+
+A window will pop up. Select "Start in test mode". This allows your server to read and write data during development without complex security rules.
+
+Click Next.
+
+Choose a location for your database (the default is usually fine) and click Enable.
+
+3. Configure Firebase Storage
+In the left-hand menu, under "Build", click on Storage.
+
+Click the "Get started" button.
+
+A window will pop up. Click Next, then choose a location (use the same one as your database), and click Done.
+
+4. Enable Email/Password Authentication
+In the left-hand menu, under "Build", click on Authentication.
+
+Click the "Get started" button.
+
+You'll be taken to the "Sign-in method" tab. Select Email/Password from the list of providers.
+
+Enable the first toggle switch for "Email/Password" and click Save.
+
+5. Get Your Web App Configuration (FIREBASE_WEB_CONFIG)
+On your main project dashboard, click the gear icon ⚙️ next to "Project Overview" in the top-left corner, then select Project settings.
+
+Under the "General" tab, scroll down to the "Your apps" section.
+
+Click on the web icon (</>) to create a new web app.
+
+Give your app a nickname (e.g., "CiviLens Web Portal") and click "Register app".
+
+Firebase will now show you the firebaseConfig object. This is what you need for your .env file. Copy this entire object. It will look like this:
+
+JavaScript
+
+const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project-id.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};
+Click "Continue to console". You have now completed the entire website setup.
+
+
+
+#  things to ask from gemini
+
+whats the order of the preference and where it is metioned
+
+and where is the database firebase?
+if yes do in sql

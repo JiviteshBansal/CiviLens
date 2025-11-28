@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CiviLens (Python) - Urban Issue Reporting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .modal { display: none; }
+    .modal.is-open { display: flex; }
+    [data-auth-view="authenticated"] { display: none; }
+    [data-auth-view="anonymous"] { display: block; }
+    body.authenticated [data-auth-view="authenticated"] { display: block; }
+    body.authenticated [data-auth-view="anonymous"] { display: none; }
+    .dashboard-item { cursor: pointer; }
+    .dashboard-item:hover { background-color: #eff6ff; }
+  </style>
+</head>
+
+<body class="bg-gray-50 font-sans text-gray-800">
+
+  <header class="bg-white shadow-md">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+        <h1 class="text-2xl font-bold text-gray-800">CiviLens (Python)</h1>
+      </div>
+
+      <div id="auth-container" class="flex items-center space-x-4">
+        <div data-auth-view="anonymous">
+          <button id="login-btn" class="font-semibold text-blue-600 hover:text-blue-800">Login / Register</button>
+        </div>
+        <div data-auth-view="authenticated" class="flex items-center space-x-3">
+          <span id="user-email" class="text-sm text-gray-600"></span>
+          <button id="logout-btn" class="font-semibold text-gray-500 hover:text-gray-800">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2">
+      <h2 class="text-2xl font-bold mb-4 text-gray-700">Live Issue Map</h2>
+      <div id="map" class="w-full h-96 md:h-[600px] rounded-lg shadow-md bg-gray-200"></div>
+    </div>
+
+    <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-lg h-full flex flex-col">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-700">Issue Dashboard</h2>
+        <button id="add-issue-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Report Issue</button>
+      </div>
+
+      <div id="dashboard-list" class="flex-grow overflow-y-auto">
+        <p class="text-gray-500 text-center mt-8">Loading issues...</p>
+      </div>
+    </div>
+  </main>
+
+  <div id="auth-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 justify-center items-center p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm relative">
+      <button class="modal-close-btn absolute top-3 right-3 text-gray-400 hover:text-gray-800 text-3xl">&times;</button>
+      <h2 id="auth-title" class="text-2xl font-bold mb-6 text-center">Login</h2>
+      <form id="auth-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Email Address</label>
+          <input type="email" id="email" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Password</label>
+          <input type="password" id="password" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+        </div>
+
+        <p id="auth-error" class="text-sm text-red-500 h-4"></p>
+
+        <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">
+          Login
+        </button>
+      </form>
+      <p class="text-center text-sm mt-4">
+        <a href="#" id="auth-toggle-link" class="text-blue-600 hover:underline">Need an account? Register</a>
+      </p>
+    </div>
+  </div>
+
+  <div id="report-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 justify-center items-center p-4">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md relative">
+      <button class="modal-close-btn absolute top-3 right-3 text-gray-400 hover:text-gray-800 text-3xl">&times;</button>
+
+      <h2 class="text-2xl font-bold mb-4 text-center">Report a New Issue</h2>
+
+      <form id="report-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Issue Image</label>
+          <input type="file" id="image-upload" accept="image/*" required class="block w-full text-sm text-gray-500"/>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Description</label>
+          <textarea id="description" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></textarea>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" class="modal-close-btn bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg">Cancel</button>
+          <button type="submit" id="submit-report-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg">Submit Report</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {{ firebase_config_obj | tojson }};
+    const mapsApiKey = "{{ maps_api_key }}";
+  </script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+  <script>
+    let auth = null;
+    if (typeof firebase !== "undefined" && firebaseConfig) {
+      try { firebase.initializeApp(firebaseConfig); auth = firebase.auth(); }
+      catch (e) { console.error("Firebase init failed", e); }
+    }
+  </script>
+
+  <script>
+    window.map = null;
+    window.userLocation = null;
+    window.markers = [];
+    window.markerInfoWindows = {};
+
+    window.initMap = function() {
+      const defaultLocation = { lat: 37.7749, lng: -122.4194 };
+      window.map = new google.maps.Map(document.getElementById('map'), {
+        center: defaultLocation, zoom: 13, mapId: 'CIVILENS_PYTHON_MAP'
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          window.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          window.map.setCenter(window.userLocation);
+          new google.maps.Marker({ position: window.userLocation, map: window.map });
+        }, () => { window.userLocation = defaultLocation; });
+      } else { window.userLocation = defaultLocation; }
+
+      fetchAndDisplayIssues();
+    };
+
+    (function ensureMapsScript() {
+      if (!mapsApiKey) return;
+      const s = document.createElement('script');
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&callback=initMap&libraries=marker`;
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    })();
+  </script>
+
+  <script>
+    function parseLocationField(loc) {
+      if (!loc) return null;
+      if (loc.lat !== undefined && loc.lng !== undefined) return { lat: Number(loc.lat), lng: Number(loc.lng) };
+      if (loc._latitude !== undefined && loc._longitude !== undefined) return { lat: Number(loc._latitude), lng: Number(loc._longitude) };
+      return null;
+    }
+
+    function makeDashboardItem(issue) {
+      const ts = issue.timestamp ? ` • ${new Date(issue.timestamp).toLocaleString()}` : '';
+      const img = issue.imageUrl ? `<img src="${issue.imageUrl}" class="w-12 h-12 object-cover rounded mr-3"/>` : '';
+
+      return `
+        <div class="dashboard-item p-3 border-b flex items-start" data-id="${issue.id}">
+          ${img}
+          <div class="flex-1">
+            <div class="font-semibold">${issue.classification || 'unclassified'}</div>
+            <div class="text-xs text-gray-500">${(issue.description || '').substring(0,80)}</div>
+            <div class="mt-1 text-xs text-gray-500">Severity: ${issue.severity ?? '-'} • Priority: ${issue.priority ?? '-'} ${ts}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function fetchAndDisplayIssues() {
+      try {
+        const res = await fetch('/api/issues');
+        const issues = await res.json();
+        updateDashboard(issues);
+        updateMapMarkers(issues);
+      } catch (err) {
+        document.getElementById('dashboard-list').innerHTML = '<p class="text-red-500 mt-8 text-center">Could not load issues.</p>';
+      }
+    }
+
+    function updateDashboard(issues) {
+      const list = document.getElementById('dashboard-list');
+      if (!issues.length) {
+        list.innerHTML = '<p class="text-gray-500 text-center mt-8">No issues reported yet.</p>';
+        return;
+      }
+      list.innerHTML = issues.map(makeDashboardItem).join('');
+      list.querySelectorAll('.dashboard-item').forEach(el => {
+        el.addEventListener('click', () => centerOnIssue(el.dataset.id));
+      });
+    }
+
+    function clearMarkers() {
+      window.markers.forEach(m => m.marker.setMap(null));
+      window.markers = [];
+    }
+
+    function updateMapMarkers(issues) {
+      clearMarkers();
+      issues.forEach(issue => {
+        const loc = parseLocationField(issue.location);
+        if (!loc) return;
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          map: window.map, position: loc, title: issue.classification
+        });
+
+        const infoContent = document.createElement('div');
+        infoContent.innerHTML = `
+          <div style="font-weight:600;margin-bottom:6px">${issue.classification}</div>
+          ${issue.imageUrl ? `<img src="${issue.imageUrl}" style="width:100%;border-radius:6px;margin-bottom:8px"/>` : ''}
+          <div style="font-size:13px;">${issue.description}</div>
+        `;
+        const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+
+        marker.addListener('click', () => infoWindow.open({ anchor: marker, map: window.map }));
+        window.markers.push({ id: issue.id, marker, infoWindow });
+      });
+    }
+
+    function centerOnIssue(id) {
+      const obj = window.markers.find(m => m.id === id);
+      if (!obj) return fetchAndDisplayIssues();
+      const pos = obj.marker.position;
+      window.map.panTo(pos);
+      window.map.setZoom(16);
+      obj.infoWindow.open({ anchor: obj.marker, map: window.map });
+    }
+
+    const authModal = document.getElementById('auth-modal');
+    const reportModal = document.getElementById('report-modal');
+
+    document.getElementById('login-btn').addEventListener('click', () => authModal.classList.add('is-open'));
+    document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
+
+    document.getElementById('add-issue-btn').addEventListener('click', () => {
+      if (!auth.currentUser) return authModal.classList.add('is-open');
+      reportModal.classList.add('is-open');
+    });
+
+    document.querySelectorAll('.modal-close-btn').forEach(btn => {
+      btn.addEventListener('click', e => e.target.closest('.modal').classList.remove('is-open'));
+    });
+
+    const authForm = document.getElementById('auth-form');
+    const authToggleLink = document.getElementById('auth-toggle-link');
+    let isLogin = true;
+
+    if (auth) {
+      auth.onAuthStateChanged(user => {
+        const body = document.body;
+        if (user) {
+          body.classList.add('authenticated');
+          document.getElementById('user-email').textContent = user.email;
+        } else {
+          body.classList.remove('authenticated');
+          document.getElementById('user-email').textContent = '';
+        }
+      });
+    }
+
+    authToggleLink.addEventListener('click', e => {
+      e.preventDefault();
+      isLogin = !isLogin;
+      document.getElementById('auth-title').textContent = isLogin ? 'Login' : 'Register';
+      document.getElementById('auth-submit-btn').textContent = isLogin ? 'Login' : 'Register';
+      authToggleLink.textContent = isLogin ? 'Need an account? Register' : 'Have an account? Login';
+    });
+
+    authForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('auth-error');
+      errorEl.textContent = '';
+
+      try {
+        if (isLogin) await auth.signInWithEmailAndPassword(email, password);
+        else await auth.createUserWithEmailAndPassword(email, password);
+        authModal.classList.remove('is-open');
+      } catch (err) {
+        errorEl.textContent = err.message;
+      }
+    });
+
+    function resizeImage(file, maxWidth, callback) {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => callback(blob), 'image/jpeg', 0.8);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById('report-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!auth.currentUser) { alert("You must be logged in to report an issue."); return; }
+      if (!window.userLocation) { alert("Cannot get your location."); return; }
+
+      const submitBtn = document.getElementById('submit-report-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      const file = document.getElementById('image-upload').files[0];
+      if (!file) {
+        alert("Select an image");
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Report';
+        return;
+      }
+
+      resizeImage(file, 1200, async (resizedBlob) => {
+        const fd = new FormData();
+        fd.append('image', resizedBlob, file.name);
+        fd.append('description', document.getElementById('description').value);
+        fd.append('latitude', window.userLocation.lat);
+        fd.append('longitude', window.userLocation.lng);
+
+        try {
+          const token = await auth.currentUser.getIdToken();
+          const resp = await fetch('/api/issues', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: fd
+          });
+
+          if (!resp.ok) throw new Error();
+          const created = await resp.json();
+
+          reportModal.classList.remove('is-open');
+          e.target.reset();
+
+          const list = document.getElementById('dashboard-list');
+          if (list.querySelector('p.text-gray-500')) list.innerHTML = '';
+
+          list.insertAdjacentHTML('afterbegin', makeDashboardItem(created));
+
+          const el = list.querySelector(`.dashboard-item[data-id="${created.id}"]`);
+          if (el) el.addEventListener('click', () => centerOnIssue(created.id));
+
+          if (window.map && created.location) {
+            const loc = parseLocationField(created.location);
+            if (loc) {
+              const marker = new google.maps.marker.AdvancedMarkerElement({
+                map: window.map,
+                position: loc,
+                title: created.classification || "issue"
+              });
+
+              const infoContent = document.createElement('div');
+              infoContent.innerHTML = `
+                <div style="font-weight:600">${created.classification}</div>
+                ${created.imageUrl ? `<img src="${created.imageUrl}" style="width:100%;border-radius:6px;margin:8px 0"/>` : ''}
+                <div>${created.description}</div>
+              `;
+
+              const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+              marker.addListener('click', () => infoWindow.open({ anchor: marker, map: window.map }));
+              window.markers.push({ id: created.id, marker, infoWindow });
+            }
+          }
+
+        } catch (err) {
+          alert("Error submitting issue.");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Report';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
