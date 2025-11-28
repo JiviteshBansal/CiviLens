@@ -23,14 +23,25 @@ cred_data = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if not cred_data:
     raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS not set")
 
-# Try to parse as JSON first (if it's inline), otherwise treat as file path
+# If the env var contains JSON, write it to a temp file and point
+# GOOGLE_APPLICATION_CREDENTIALS at that file so other google libraries
+# (which call google.auth.default()) can load it from disk.
+temp_cred_path = None
 try:
     cred_dict = json.loads(cred_data)
+    # create a secure temp file and write JSON
+    import tempfile
+    fd, temp_cred_path = tempfile.mkstemp(prefix="gcloud-sa-", suffix=".json")
+    with os.fdopen(fd, "w") as f:
+        json.dump(cred_dict, f)
+    # ensure other Google libs see a file path
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_cred_path
     cred = credentials.Certificate(cred_dict)
 except (json.JSONDecodeError, ValueError):
-    # If not JSON, treat as file path
+    # Not JSON: treat as a file path
     if not os.path.exists(cred_data):
         raise RuntimeError(f"GOOGLE_APPLICATION_CREDENTIALS file not found: {cred_data}")
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = cred_data
     cred = credentials.Certificate(cred_data)
 
 firebase_admin.initialize_app(cred)
